@@ -49,6 +49,14 @@ resource "azurerm_dns_a_record" "llm" {
   records             = ["20.230.229.131"]
 }
 
+resource "azurerm_dns_cname_record" "grafana_llm" {
+  name                = "grafana.llm"
+  zone_name           = azurerm_dns_zone.mysak_fun.name
+  resource_group_name = azurerm_resource_group.dns.name
+  ttl                 = 300
+  record              = "llm.mysak.fun"
+}
+
 resource "azurerm_dns_txt_record" "penny_verification" {
   name                = "asuid.penny"
   zone_name           = azurerm_dns_zone.mysak_fun.name
