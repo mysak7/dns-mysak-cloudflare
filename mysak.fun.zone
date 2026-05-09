@@ -1,0 +1,32 @@
+; mysak.fun — Cloudflare import zone file
+; Generated: 2026-05-09
+;
+; HOW TO IMPORT:
+;   Cloudflare Dashboard → mysak.fun → DNS → Import DNS Records → paste or upload this file
+;
+; NOTES:
+;   - Cloudflare adds SOA/NS automatically; the ones below are skipped on import
+;   - Proxied (orange-cloud) status is NOT in BIND format — set it manually after import:
+;       penny      → DNS only (CNAME to Container Apps; Cloudflare can't proxy non-HTTP CNAME origins)
+;       cloudfire  → Proxied (orange cloud)  ← required for az-networking-lab/3-cloudfire-web-app
+;       aks-llm    → DNS only (direct A record, LB IP restricted to owner IP anyway)
+;   - cloudfire records have TODO placeholders — fill in after `terraform apply` in az-networking-lab/3-cloudfire-web-app
+;     Run: cd /home/mi/GitHub/az-networking-lab/3-cloudfire-web-app && terraform output
+;
+$ORIGIN mysak.fun.
+$TTL 300
+
+; ── penny (Azure Container Apps — azure-penny) ───────────────────────────────
+penny           300  IN  CNAME  ca-prd-eus-penny.thankfulisland-4131bb98.eastus.azurecontainerapps.io.
+asuid.penny     300  IN  TXT    "24C4FD8D3A8507E43D386A411379665BC15579939C271A26E15AE5643A8A540A"
+
+; ── aks-llm (AKS LLM cluster — az-llm-aks, pip-dev-wus2-llm) ────────────────
+; Static IP survives nightly cluster destroy. Cluster dashboard at http://aks-llm.mysak.fun
+aks-llm         300  IN  A      20.230.229.131
+
+; ── cloudfire (Azure App Service — az-networking-lab/3-cloudfire-web-app) ────
+; TODO: replace both PLACEHOLDER values after terraform apply
+; cloudflare_cname_target output  → replaces APPSERVICE_HOSTNAME.azurewebsites.net
+; domain_verification_id output   → replaces VERIFICATION_ID
+cloudfire       1    IN  CNAME  APPSERVICE_HOSTNAME.azurewebsites.net.
+asuid.cloudfire 60   IN  TXT    "VERIFICATION_ID"
