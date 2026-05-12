@@ -67,6 +67,24 @@ resource "azurerm_dns_txt_record" "penny_verification" {
   }
 }
 
+resource "azurerm_dns_cname_record" "cloudfire" {
+  name                = "cloudfire"
+  zone_name           = azurerm_dns_zone.mysak_fun.name
+  resource_group_name = azurerm_resource_group.dns.name
+  ttl                 = 300
+  record              = "mi-3-cloudfire-y29hf3.azurewebsites.net"
+}
+
+resource "azurerm_dns_txt_record" "cloudfire_verification" {
+  name                = "asuid.cloudfire"
+  zone_name           = azurerm_dns_zone.mysak_fun.name
+  resource_group_name = azurerm_resource_group.dns.name
+  ttl                 = 300
+  record {
+    value = "24C4FD8D3A8507E43D386A411379665BC15579939C271A26E15AE5643A8A540A"
+  }
+}
+
 output "nameservers" {
   value       = azurerm_dns_zone.mysak_fun.name_servers
   description = "Nameservery ke zkopírování do WEDOS"
