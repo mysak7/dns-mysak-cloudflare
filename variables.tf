@@ -19,3 +19,19 @@ variable "azure_seip_nginx_ip" {
   default     = "20.103.44.124"
   description = "nginx-ingress LoadBalancer IP from azure-seip cluster (terraform output nginx_ingress_ip)"
 }
+
+variable "cloudflare_account_id" {
+  type        = string
+  description = "Cloudflare account ID (Zero Trust dashboard → Settings → Account ID)"
+}
+
+variable "entra_seip_client_id" {
+  type        = string
+  description = "App Registration client ID for seip.mysak.fun Cloudflare Access"
+}
+
+variable "entra_seip_client_secret" {
+  type      = string
+  sensitive = true
+  description = "App Registration client secret for seip.mysak.fun Cloudflare Access"
+}

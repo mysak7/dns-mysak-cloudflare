@@ -98,6 +98,65 @@ resource "cloudflare_record" "azure_seip" {
   proxied = true
 }
 
+# ---------------------------------------------------------------------------
+# seip.mysak.fun — AWS seip-portal behind Cloudflare Access (Entra ID)
+# ---------------------------------------------------------------------------
+
+# Read the Elastic IP created in the seip-infrastructure dev environment
+data "aws_eip" "nat_bastion" {
+  tags = {
+    Name = "dev-nat-bastion-eip"
+  }
+}
+
+resource "cloudflare_record" "seip" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "seip"
+  content = data.aws_eip.nat_bastion.public_ip
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
+
+# Cloudflare Access — Entra ID identity provider
+# Before applying: create a new App Registration in Azure portal:
+#   Redirect URI: https://<your-team>.cloudflareaccess.com/cdn-cgi/access/callback
+#   Note the Application (client) ID and create a client secret.
+resource "cloudflare_access_identity_provider" "entra_id" {
+  account_id = var.cloudflare_account_id
+  name       = "Entra ID"
+  type       = "azureAD"
+
+  config {
+    client_id     = var.entra_seip_client_id
+    client_secret = var.entra_seip_client_secret
+    directory_id  = "f50acfeb-1d10-42e2-80af-2f0ca0a0d6a0"
+  }
+}
+
+# Application — protects the entire seip.mysak.fun domain
+resource "cloudflare_access_application" "seip" {
+  account_id                = var.cloudflare_account_id
+  name                      = "SEIP Portal"
+  domain                    = "seip.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+}
+
+# Policy — allow only michal.burdik@gmail.com
+resource "cloudflare_access_policy" "seip_allow" {
+  application_id = cloudflare_access_application.seip.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
+}
+
 resource "cloudflare_zone_settings_override" "mysak_fun" {
   zone_id = data.cloudflare_zone.mysak_fun.id
   settings {
