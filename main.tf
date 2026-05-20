@@ -128,9 +128,10 @@ resource "cloudflare_access_identity_provider" "entra_id" {
   type       = "azureAD"
 
   config {
-    client_id     = var.entra_seip_client_id
-    client_secret = var.entra_seip_client_secret
-    directory_id  = "f50acfeb-1d10-42e2-80af-2f0ca0a0d6a0"
+    client_id      = var.entra_seip_client_id
+    client_secret  = var.entra_seip_client_secret
+    directory_id   = "f50acfeb-1d10-42e2-80af-2f0ca0a0d6a0"
+    support_groups = true
   }
 }
 
