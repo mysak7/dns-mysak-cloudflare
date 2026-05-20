@@ -142,6 +142,7 @@ resource "cloudflare_access_application" "seip" {
   type                      = "self_hosted"
   session_duration          = "24h"
   auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
 }
 
 # Policy — allow only michal.burdik@gmail.com
