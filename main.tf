@@ -221,3 +221,45 @@ resource "cloudflare_zone_settings_override" "mysak_fun" {
     ssl = "full" # origin has valid Let's Encrypt cert; use "strict" to also verify chain
   }
 }
+
+# ---------------------------------------------------------------------------
+# ACM certificate for aws-penny.mysak.fun
+# Created here so the DNS validation CNAME can be added to Cloudflare in the
+# same apply. The validated cert ARN is output for use in aws-penny Terraform.
+# ---------------------------------------------------------------------------
+
+resource "aws_acm_certificate" "aws_penny" {
+  domain_name       = "aws-penny.mysak.fun"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "cloudflare_record" "aws_penny_acm_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.aws_penny.domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  }
+
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = each.value.name
+  content = each.value.value
+  type    = each.value.type
+  ttl     = 60
+  proxied = false
+}
+
+resource "aws_acm_certificate_validation" "aws_penny" {
+  certificate_arn         = aws_acm_certificate.aws_penny.arn
+  validation_record_fqdns = [for record in cloudflare_record.aws_penny_acm_validation : record.hostname]
+}
+
+output "aws_penny_acm_cert_arn" {
+  value       = aws_acm_certificate_validation.aws_penny.certificate_arn
+  description = "Validated ACM cert ARN for aws-penny.mysak.fun — paste into aws-penny/terraform/variables/prd.tfvars"
+}
