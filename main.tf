@@ -160,9 +160,8 @@ resource "cloudflare_access_policy" "seip_allow" {
 }
 
 # ---------------------------------------------------------------------------
-# aws-penny.mysak.fun — AWS ECS Fargate app behind Cloudflare proxy
-# ALB speaks HTTP only; Configuration Rule overrides SSL to "flexible" so
-# Cloudflare connects to origin over HTTP while serving HTTPS to the user.
+# aws-penny.mysak.fun — AWS ECS Fargate app behind Cloudflare Access (Entra ID)
+# Cloudflare proxies HTTPS to user; connects to ALB over HTTP (flexible SSL).
 # ---------------------------------------------------------------------------
 
 resource "cloudflare_record" "aws_penny" {
@@ -170,8 +169,49 @@ resource "cloudflare_record" "aws_penny" {
   name    = "aws-penny"
   content = var.aws_penny_alb_dns
   type    = "CNAME"
-  ttl     = 300
-  proxied = false
+  ttl     = 1
+  proxied = true
+}
+
+# Configuration Rule — override zone-wide ssl=full for this subdomain only
+resource "cloudflare_ruleset" "aws_penny_ssl" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "aws-penny SSL override"
+  kind    = "zone"
+  phase   = "http_config_settings"
+
+  rules {
+    action = "set_config"
+    action_parameters {
+      ssl = "flexible"
+    }
+    expression  = "(http.host eq \"aws-penny.mysak.fun\")"
+    description = "Flexible SSL for aws-penny — ALB speaks HTTP"
+    enabled     = true
+  }
+}
+
+# Cloudflare Access — protect aws-penny.mysak.fun with Entra ID (same provider as seip)
+resource "cloudflare_access_application" "aws_penny" {
+  account_id                = var.cloudflare_account_id
+  name                      = "aws-penny"
+  domain                    = "aws-penny.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
+}
+
+resource "cloudflare_access_policy" "aws_penny_allow" {
+  application_id = cloudflare_access_application.aws_penny.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
 }
 
 
