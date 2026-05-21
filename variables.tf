@@ -35,3 +35,9 @@ variable "entra_seip_client_secret" {
   sensitive = true
   description = "App Registration client secret for seip.mysak.fun Cloudflare Access"
 }
+
+variable "aws_penny_alb_dns" {
+  type        = string
+  default     = "alb-prd-euc1-penny-279184951.eu-central-1.elb.amazonaws.com"
+  description = "DNS name of the aws-penny ALB (terraform output alb_dns_name in aws-penny/terraform)"
+}

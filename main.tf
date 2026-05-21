@@ -159,6 +159,39 @@ resource "cloudflare_access_policy" "seip_allow" {
   }
 }
 
+# ---------------------------------------------------------------------------
+# aws-penny.mysak.fun — AWS ECS Fargate app behind Cloudflare proxy
+# ALB speaks HTTP only; Configuration Rule overrides SSL to "flexible" so
+# Cloudflare connects to origin over HTTP while serving HTTPS to the user.
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_record" "aws_penny" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "aws-penny"
+  content = var.aws_penny_alb_dns
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_ruleset" "ssl_flexible_aws_penny" {
+  zone_id     = data.cloudflare_zone.mysak_fun.id
+  name        = "SSL flexible for aws-penny"
+  description = "Override SSL to flexible for aws-penny (ALB HTTP-only origin)"
+  kind        = "zone"
+  phase       = "http_config_settings"
+
+  rules {
+    action = "set_config"
+    action_parameters {
+      ssl = "flexible"
+    }
+    expression  = "(http.host eq \"aws-penny.mysak.fun\")"
+    description = "aws-penny ALB is HTTP only"
+    enabled     = true
+  }
+}
+
 resource "cloudflare_zone_settings_override" "mysak_fun" {
   zone_id = data.cloudflare_zone.mysak_fun.id
   settings {
