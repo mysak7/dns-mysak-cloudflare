@@ -17,7 +17,7 @@ variable "cloudflare_api_token" {
 variable "azure_seip_nginx_ip" {
   type        = string
   default     = "20.103.44.124"
-  description = "nginx-ingress LoadBalancer IP from azure-seip cluster (terraform output nginx_ingress_ip)"
+  description = "nginx-ingress LoadBalancer IP from azure-seip cluster — used for az-seip.mysak.fun (terraform output nginx_ingress_ip)"
 }
 
 variable "cloudflare_account_id" {

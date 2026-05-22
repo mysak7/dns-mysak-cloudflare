@@ -89,17 +89,18 @@ data "cloudflare_zone" "mysak_fun" {
   name = "mysak.fun"
 }
 
-resource "cloudflare_record" "azure_seip" {
+resource "cloudflare_record" "az_seip" {
   zone_id = data.cloudflare_zone.mysak_fun.id
-  name    = "azure-seip"
+  name    = "az-seip"
   content = var.azure_seip_nginx_ip
   type    = "A"
-  ttl     = 1 # 1 = automatic (required when proxied)
+  ttl     = 1
   proxied = true
 }
 
 # ---------------------------------------------------------------------------
-# seip.mysak.fun — AWS seip-portal behind Cloudflare Access (Entra ID)
+# aws-seip.mysak.fun — AWS seip-portal behind Cloudflare Access (Entra ID)
+# seip.mysak.fun — CNAME alias to aws-seip.mysak.fun
 # ---------------------------------------------------------------------------
 
 # Read the Elastic IP created in the seip-infrastructure dev environment
@@ -109,11 +110,20 @@ data "aws_eip" "nat_bastion" {
   }
 }
 
+resource "cloudflare_record" "aws_seip" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "aws-seip"
+  content = data.aws_eip.nat_bastion.public_ip
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
+
 resource "cloudflare_record" "seip" {
   zone_id = data.cloudflare_zone.mysak_fun.id
   name    = "seip"
-  content = data.aws_eip.nat_bastion.public_ip
-  type    = "A"
+  content = "aws-seip.mysak.fun"
+  type    = "CNAME"
   ttl     = 1
   proxied = true
 }
@@ -135,7 +145,53 @@ resource "cloudflare_access_identity_provider" "entra_id" {
   }
 }
 
-# Application — protects the entire seip.mysak.fun domain
+# Application — aws-seip.mysak.fun
+resource "cloudflare_access_application" "aws_seip" {
+  account_id                = var.cloudflare_account_id
+  name                      = "SEIP Portal (AWS)"
+  domain                    = "aws-seip.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
+}
+
+resource "cloudflare_access_policy" "aws_seip_allow" {
+  application_id = cloudflare_access_application.aws_seip.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
+}
+
+# Application — az-seip.mysak.fun
+resource "cloudflare_access_application" "az_seip" {
+  account_id                = var.cloudflare_account_id
+  name                      = "SEIP Portal (Azure)"
+  domain                    = "az-seip.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
+}
+
+resource "cloudflare_access_policy" "az_seip_allow" {
+  application_id = cloudflare_access_application.az_seip.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
+}
+
+# Application — seip.mysak.fun (CNAME alias to aws-seip)
 resource "cloudflare_access_application" "seip" {
   account_id                = var.cloudflare_account_id
   name                      = "SEIP Portal"
@@ -146,7 +202,6 @@ resource "cloudflare_access_application" "seip" {
   allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
 }
 
-# Policy — allow only michal.burdik@gmail.com
 resource "cloudflare_access_policy" "seip_allow" {
   application_id = cloudflare_access_application.seip.id
   account_id     = var.cloudflare_account_id
@@ -262,6 +317,15 @@ resource "cloudflare_record" "az_penny" {
   type    = "CNAME"
   ttl     = 1
   proxied = true
+}
+
+resource "cloudflare_record" "az_penny_domain_verification" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "asuid.az-penny"
+  content = "24C4FD8D3A8507E43D386A411379665BC15579939C271A26E15AE5643A8A540A"
+  type    = "TXT"
+  ttl     = 60
+  proxied = false
 }
 
 resource "cloudflare_access_application" "az_penny" {
