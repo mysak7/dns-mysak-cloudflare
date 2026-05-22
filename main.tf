@@ -185,8 +185,8 @@ resource "cloudflare_ruleset" "aws_penny_ssl" {
     action_parameters {
       ssl = "flexible"
     }
-    expression  = "(http.host eq \"aws-penny.mysak.fun\")"
-    description = "Flexible SSL for aws-penny — ALB speaks HTTP"
+    expression  = "(http.host eq \"aws-penny.mysak.fun\") or (http.host eq \"penny.mysak.fun\")"
+    description = "Flexible SSL for aws-penny and penny — ALB speaks HTTP"
     enabled     = true
   }
 }
@@ -214,6 +214,77 @@ resource "cloudflare_access_policy" "aws_penny_allow" {
   }
 }
 
+
+# ---------------------------------------------------------------------------
+# penny.mysak.fun — same ALB as aws-penny, own Access gate
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_record" "penny" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "penny"
+  content = var.aws_penny_alb_dns
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_access_application" "penny" {
+  account_id                = var.cloudflare_account_id
+  name                      = "penny"
+  domain                    = "penny.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
+}
+
+resource "cloudflare_access_policy" "penny_allow" {
+  application_id = cloudflare_access_application.penny.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
+}
+
+# ---------------------------------------------------------------------------
+# az-penny.mysak.fun — Azure Container App, own Access gate
+# Zone-wide ssl=full works; ACA has a valid cert for its own FQDN.
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_record" "az_penny" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "az-penny"
+  content = var.az_penny_aca_fqdn
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_access_application" "az_penny" {
+  account_id                = var.cloudflare_account_id
+  name                      = "az-penny"
+  domain                    = "az-penny.mysak.fun"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = true
+  allowed_idps              = [cloudflare_access_identity_provider.entra_id.id]
+}
+
+resource "cloudflare_access_policy" "az_penny_allow" {
+  application_id = cloudflare_access_application.az_penny.id
+  account_id     = var.cloudflare_account_id
+  name           = "Allow michal.burdik@gmail.com"
+  precedence     = 1
+  decision       = "allow"
+
+  include {
+    email = ["michal.burdik@gmail.com"]
+  }
+}
 
 resource "cloudflare_zone_settings_override" "mysak_fun" {
   zone_id = data.cloudflare_zone.mysak_fun.id

@@ -41,3 +41,9 @@ variable "aws_penny_alb_dns" {
   default     = "alb-prd-euc1-penny-279184951.eu-central-1.elb.amazonaws.com"
   description = "DNS name of the aws-penny ALB (terraform output alb_dns_name in aws-penny/terraform)"
 }
+
+variable "az_penny_aca_fqdn" {
+  type        = string
+  default     = "ca-prd-eus-penny.thankfulisland-4131bb98.eastus.azurecontainerapps.io"
+  description = "FQDN of the azure-penny Container App (terraform output container_app_fqdn in azure-penny/terraform)"
+}
