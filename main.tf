@@ -328,6 +328,15 @@ resource "cloudflare_record" "az_penny_domain_verification" {
   proxied = false
 }
 
+resource "cloudflare_record" "az_penny_cert_validation" {
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "_5ke9xvuuxhhbsnk4xskmsaxq53qxmtc"
+  content = "az-penny.mysak.fun"
+  type    = "TXT"
+  ttl     = 60
+  proxied = false
+}
+
 resource "cloudflare_access_application" "az_penny" {
   account_id                = var.cloudflare_account_id
   name                      = "az-penny"
