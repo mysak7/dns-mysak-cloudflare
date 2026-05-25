@@ -1,560 +1,1192 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>az-dns-mysak Architecture</title>
+  <title>mysak.fun — Infrastrukturní manuál</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0f1a;
+      --surface:   #131929;
+      --surface2:  #1a2236;
+      --border:    #222d42;
+      --border2:   #2d3d58;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --muted2:    #94a3b8;
+      --blue:      #3b82f6;
+      --blue-dim:  #1e3a5f;
+      --blue-text: #7dd3fc;
+      --green:     #22c55e;
+      --green-dim: #14391c;
+      --green-text:#86efac;
+      --orange:    #f59e0b;
+      --orange-dim:#3d2000;
+      --orange-txt:#fdba74;
+      --purple:    #a855f7;
+      --purple-dim:#2d1b5c;
+      --purple-txt:#c4b5fd;
+      --red:       #ef4444;
+      --red-dim:   #3d1010;
+      --red-txt:   #fca5a5;
+      --cyan:      #06b6d4;
+      --cyan-dim:  #0e2d3a;
+      --cyan-txt:  #67e8f9;
+      --mono:      'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      padding: 32px 24px;
+      line-height: 1.6;
     }
 
-    h1 {
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #f8fafc;
-      margin-bottom: 6px;
-      letter-spacing: 0.02em;
-    }
-
-    .subtitle {
-      text-align: center;
-      font-size: 0.85rem;
-      color: #64748b;
-      margin-bottom: 40px;
-    }
-
-    /* ── Layout columns ── */
-    .diagram {
+    /* ── TOP NAV ── */
+    .topnav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
       display: flex;
-      align-items: flex-start;
-      justify-content: center;
+      align-items: center;
       gap: 0;
-      max-width: 1100px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topnav a {
+      color: var(--muted2);
+      text-decoration: none;
+      font-size: 0.8rem;
+      padding: 14px 16px;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .topnav a:hover, .topnav a.active {
+      color: var(--blue-text);
+      border-bottom-color: var(--blue);
+    }
+    .topnav .logo {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      padding: 14px 16px 14px 0;
+      margin-right: 16px;
+      border-right: 1px solid var(--border);
+      border-bottom: none !important;
+    }
+    .nav-spacer { flex: 1; }
+    .nav-updated {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 14px 0;
+    }
+
+    /* ── PAGE LAYOUT ── */
+    .page {
+      max-width: 1160px;
       margin: 0 auto;
+      padding: 40px 24px 80px;
     }
 
-    .col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
+    .page-title {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -.02em;
+    }
+    .page-subtitle {
+      color: var(--muted2);
+      font-size: 0.9rem;
+      margin-top: 6px;
     }
 
-    .col-registrar  { width: 180px; }
-    .col-connector  { width: 60px;  align-self: center; }
-    .col-azure      { width: 320px; }
-    .col-targets    { width: 340px; gap: 20px; }
-
-    /* ── Connector lines ── */
-    .connector {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #475569;
-      font-size: 0.65rem;
-      gap: 4px;
+    /* ── SECTIONS ── */
+    section {
+      margin-top: 52px;
+      scroll-margin-top: 60px;
     }
-    .connector .line {
-      width: 2px;
-      height: 20px;
-      background: #334155;
-    }
-    .connector .hline {
-      width: 100%;
-      height: 2px;
-      background: #334155;
-    }
-    .connector .arrow { font-size: 14px; color: #475569; }
-    .h-connector {
-      display: flex;
-      align-items: center;
-      color: #475569;
-      font-size: 0.65rem;
-      gap: 4px;
-      align-self: center;
-      flex: 0 0 auto;
-    }
-    .h-connector .hline {
-      width: 40px;
-      height: 2px;
-      background: #334155;
-    }
-    .h-connector .arrow { font-size: 14px; color: #475569; }
-
-    /* ── Cards ── */
-    .card {
-      background: #1e2433;
-      border: 1px solid #2d3748;
-      border-radius: 12px;
-      padding: 16px 20px;
-      width: 100%;
-    }
-
-    .card-header {
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 12px;
+    }
+    .section-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
     }
 
-    .icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .card + .card { margin-top: 14px; }
+
+    /* ── GRID ── */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) {
+      .grid2, .grid3 { grid-template-columns: 1fr; }
     }
 
-    .icon-wedos    { background: #1a3a5c; }
-    .icon-azure    { background: #0e2d4a; }
-    .icon-tf       { background: #2d1b4e; }
-    .icon-dns      { background: #0f2e1a; }
-    .icon-record   { background: #1a2a0e; }
-    .icon-aks      { background: #0e1f3a; }
-    .icon-app      { background: #1a1a0e; }
-    .icon-state    { background: #2d2010; }
-
-    .card-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #f1f5f9;
-    }
-
-    .card-subtitle {
-      font-size: 0.72rem;
-      color: #64748b;
-      margin-top: 2px;
-    }
-
-    /* ── Badge strip ── */
-    .badge-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
+    /* ── BADGES ── */
     .badge {
-      font-size: 0.68rem;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.68rem; font-weight: 600;
       padding: 2px 8px;
       border-radius: 20px;
-      font-weight: 500;
+      white-space: nowrap;
     }
+    .badge-blue   { background: var(--blue-dim);   color: var(--blue-text);   border: 1px solid #1d4ed8; }
+    .badge-green  { background: var(--green-dim);  color: var(--green-text);  border: 1px solid #166534; }
+    .badge-orange { background: var(--orange-dim); color: var(--orange-txt);  border: 1px solid #92400e; }
+    .badge-purple { background: var(--purple-dim); color: var(--purple-txt);  border: 1px solid #5b21b6; }
+    .badge-red    { background: var(--red-dim);    color: var(--red-txt);     border: 1px solid #991b1b; }
+    .badge-cyan   { background: var(--cyan-dim);   color: var(--cyan-txt);    border: 1px solid #0e7490; }
+    .badge-gray   { background: var(--surface2);   color: var(--muted2);      border: 1px solid var(--border2); }
+    .badge-lock   { background: #14391c; color: #4ade80; border: 1px solid #166534; }
+    .badge-open   { background: #3d2000; color: #fbbf24; border: 1px solid #78350f; }
 
-    .badge-blue   { background: #1e3a5f; color: #7dd3fc; border: 1px solid #1d4ed8; }
-    .badge-green  { background: #14391c; color: #86efac; border: 1px solid #166534; }
-    .badge-purple { background: #2d1b5c; color: #c4b5fd; border: 1px solid #5b21b6; }
-    .badge-orange { background: #3d2000; color: #fdba74; border: 1px solid #92400e; }
-    .badge-red    { background: #3d1010; color: #fca5a5; border: 1px solid #991b1b; }
-    .badge-gray   { background: #1e2433; color: #94a3b8; border: 1px solid #334155; }
-
-    /* ── DNS records table ── */
-    .records-table {
+    /* ── SERVICES TABLE ── */
+    .svc-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.72rem;
-      margin-top: 4px;
     }
-
-    .records-table th {
+    .svc-table th {
       text-align: left;
-      color: #475569;
-      font-weight: 600;
-      padding: 4px 6px;
-      border-bottom: 1px solid #2d3748;
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .records-table td {
-      padding: 5px 6px;
-      border-bottom: 1px solid #1a2030;
-      color: #cbd5e1;
-      font-family: 'Cascadia Code', 'Fira Code', monospace;
-    }
-
-    .records-table tr:last-child td { border-bottom: none; }
-
-    .type-a      { color: #7dd3fc; }
-    .type-cname  { color: #86efac; }
-    .type-txt    { color: #fdba74; }
-
-    .todo { color: #f87171; font-style: italic; }
-
-    /* ── Section label ── */
-    .section-label {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #475569;
+      color: var(--muted);
+      font-size: 0.68rem;
       font-weight: 700;
-      text-align: center;
-      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border2);
+      background: var(--surface2);
     }
-
-    /* ── Terraform state note ── */
-    .state-note {
-      font-size: 0.68rem;
-      color: #94a3b8;
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #2d3748;
+    .svc-table th:first-child { border-radius: 8px 0 0 0; }
+    .svc-table th:last-child  { border-radius: 0 8px 0 0; }
+    .svc-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
     }
-
-    .state-note code {
-      font-family: monospace;
-      color: #c4b5fd;
-      font-size: 0.68rem;
-    }
-
-    /* ── Target cards (right column) ── */
-    .target-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .target-card {
-      background: #161c2a;
-      border: 1px solid #2d3748;
-      border-radius: 10px;
-      padding: 12px 16px;
-    }
-
-    .target-card.aks   { border-left: 3px solid #3b82f6; }
-    .target-card.penny { border-left: 3px solid #22c55e; }
-    .target-card.cloud { border-left: 3px solid #f59e0b; }
-
-    .target-title {
+    .svc-table tr:last-child td { border-bottom: none; }
+    .svc-table tr:hover td { background: var(--surface2); }
+    .svc-url {
+      font-family: var(--mono);
       font-size: 0.82rem;
+      color: var(--blue-text);
       font-weight: 600;
-      color: #f1f5f9;
-      margin-bottom: 4px;
     }
-
-    .target-detail {
-      font-size: 0.68rem;
-      color: #64748b;
-      font-family: monospace;
+    .svc-url a { color: inherit; text-decoration: none; }
+    .svc-url a:hover { text-decoration: underline; }
+    .svc-backend {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted2);
       word-break: break-all;
     }
-
-    .target-repo {
-      font-size: 0.65rem;
-      color: #475569;
-      margin-top: 6px;
+    .svc-desc {
+      font-size: 0.8rem;
+      color: var(--text);
     }
 
-    .target-repo a {
-      color: #7dd3fc;
-      text-decoration: none;
-    }
-
-    /* ── Infra meta strip ── */
-    .meta-strip {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 6px;
-    }
-
-    .meta-item {
-      font-size: 0.68rem;
-      color: #64748b;
-    }
-
-    .meta-item span {
-      color: #94a3b8;
-    }
-
-    /* ── Legend ── */
-    .legend {
-      max-width: 1100px;
-      margin: 36px auto 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      justify-content: center;
-    }
-
-    .legend-item {
+    /* ── FLOW DIAGRAM ── */
+    .flow {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .flow-node {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 12px 18px;
+      text-align: center;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+    .flow-node .fn-icon { font-size: 22px; margin-bottom: 4px; }
+    .flow-node .fn-title { font-size: 0.8rem; font-weight: 700; color: #f1f5f9; }
+    .flow-node .fn-sub { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+    .flow-arrow {
+      flex: 1;
+      min-width: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--muted);
+    }
+    .flow-arrow .fa-line {
+      width: 100%;
+      height: 2px;
+      background: var(--border2);
+    }
+    .flow-arrow .fa-label {
+      font-size: 0.6rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .flow-arrow .fa-tip {
+      font-size: 12px;
+      margin-top: -2px;
+    }
+
+    /* ── ENTRAID DETAIL ── */
+    .entra-box {
+      background: var(--surface2);
+      border: 1px solid #3b3b5c;
+      border-left: 4px solid var(--purple);
+      border-radius: 10px;
+      padding: 18px 22px;
+    }
+    .entra-box + .entra-box { margin-top: 12px; }
+    .entra-title {
+      font-weight: 700;
+      color: #f1f5f9;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── KEY-VALUE GRID ── */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 20px;
+      align-items: start;
+      font-size: 0.8rem;
+    }
+    .kv-key {
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 600;
       font-size: 0.72rem;
-      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding-top: 2px;
+    }
+    .kv-val {
+      font-family: var(--mono);
+      color: var(--text);
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
+    .kv-val.highlight { color: var(--purple-txt); }
+    .kv-val.green     { color: var(--green-text); }
+    .kv-val.blue      { color: var(--blue-text); }
+
+    /* ── CODE BLOCK ── */
+    pre, code {
+      font-family: var(--mono);
+    }
+    pre {
+      background: #080d18;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+    .hl-key    { color: #67e8f9; }
+    .hl-str    { color: #86efac; }
+    .hl-num    { color: #fdba74; }
+    .hl-cmt    { color: #475569; font-style: italic; }
+    .hl-kw     { color: #c4b5fd; font-weight: 600; }
+
+    /* ── DNS RECORDS TABLE ── */
+    .dns-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    .dns-table th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .dns-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.76rem;
+    }
+    .dns-table tr:last-child td { border-bottom: none; }
+    .dns-table tr:hover td { background: var(--surface2); }
+    .t-a     { color: var(--blue-text); font-weight: 700; }
+    .t-cname { color: var(--green-text); font-weight: 700; }
+    .t-txt   { color: var(--orange-txt); font-weight: 700; }
+    .proxied-yes { color: var(--orange-txt); }
+    .proxied-no  { color: var(--muted); }
+    .ssl-flex    { color: var(--cyan-txt); }
+    .ssl-full    { color: var(--green-text); }
+    .ssl-na      { color: var(--muted); }
+
+    .group-header td {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 6px 10px;
+      font-family: 'Segoe UI', sans-serif;
     }
 
-    .legend-dot {
-      width: 10px;
-      height: 10px;
+    /* ── TIMELINE / STEPS ── */
+    .steps {
+      position: relative;
+      padding-left: 28px;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 8px; top: 8px; bottom: 8px;
+      width: 2px;
+      background: var(--border2);
+    }
+    .step {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .step::before {
+      content: '';
+      position: absolute;
+      left: -24px; top: 6px;
+      width: 12px; height: 12px;
       border-radius: 50%;
+      background: var(--blue);
+      border: 2px solid var(--bg);
+    }
+    .step-title { font-weight: 700; color: #f1f5f9; font-size: 0.88rem; }
+    .step-body { color: var(--muted2); font-size: 0.8rem; margin-top: 4px; }
+    .step-body code {
+      background: var(--surface2);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--cyan-txt);
     }
 
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      .diagram { flex-direction: column; align-items: center; }
-      .h-connector { transform: rotate(90deg); margin: 4px 0; }
-      .col-registrar, .col-azure, .col-targets { width: 100%; max-width: 420px; }
+    /* ── TERRAFORM RESOURCE TREE ── */
+    .tf-tree {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.9;
+    }
+    .tf-resource  { color: var(--cyan-txt); }
+    .tf-provider  { color: var(--orange-txt); }
+    .tf-data      { color: var(--purple-txt); }
+    .tf-output    { color: var(--green-text); }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.82rem;
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .callout-info    { background: #0e2038; border: 1px solid #1d4ed8; }
+    .callout-warn    { background: #251500; border: 1px solid #92400e; }
+    .callout-success { background: var(--green-dim); border: 1px solid #166534; }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { color: var(--muted2); }
+    .callout-body strong { color: var(--text); }
+    .callout-body code {
+      font-family: var(--mono);
+      background: rgba(0,0,0,.3);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.78rem;
+      color: var(--cyan-txt);
+    }
+
+    /* ── PILL row ── */
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    /* ── CHIP ── */
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+    }
+    .chip-label { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: .04em; }
+    .chip-val   { color: var(--text); font-weight: 600; }
+
+    /* ── FOOTER ── */
+    .footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: space-between;
     }
   </style>
 </head>
 <body>
 
-  <h1>az-dns-mysak · Architecture</h1>
-  <p class="subtitle">Azure DNS for mysak.fun — managed by Terraform · Region: West Europe</p>
+<!-- ── TOP NAV ── -->
+<nav class="topnav">
+  <span class="logo">🌐 mysak.fun</span>
+  <a href="#services" class="active">Služby</a>
+  <a href="#flow">Request flow</a>
+  <a href="#entraid">Entra ID</a>
+  <a href="#dns">DNS záznamy</a>
+  <a href="#ssl">SSL</a>
+  <a href="#terraform">Terraform</a>
+  <span class="nav-spacer"></span>
+  <span class="nav-updated">Generováno 2026-05-25 · repo: dns-mysak-cloudflare</span>
+</nav>
 
-  <div class="diagram">
+<!-- ── PAGE ── -->
+<div class="page">
 
-    <!-- ── Column 1: Domain Registrar ── -->
-    <div class="col col-registrar">
-      <div class="section-label">Registrar</div>
+  <h1 class="page-title">mysak.fun — Infrastrukturní manuál</h1>
+  <p class="page-subtitle">
+    Kompletní přehled DNS, Cloudflare Access, Entra ID autentizace a napojení na backend služby.
+    Autoritativní DNS: <strong>Cloudflare</strong> · Registrátor: <strong>WEDOS</strong>
+  </p>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 1 — PŘEHLED SLUŽEB
+  ══════════════════════════════════════════════════════════ -->
+  <section id="services">
+    <div class="section-title">
+      <div class="section-icon" style="background:#1e3a5f;">🔗</div>
+      Přehled přístupných služeb
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="svc-table">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Popis</th>
+            <th>Auth</th>
+            <th>Backend</th>
+            <th>Typ záznamu</th>
+            <th>SSL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- SEIP skupina -->
+          <tr>
+            <td><span class="svc-url"><a href="https://seip.mysak.fun" target="_blank">seip.mysak.fun</a></span></td>
+            <td><span class="svc-desc">SEIP Portal (hlavní alias)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">CNAME → aws-seip.mysak.fun</span></td>
+            <td><span class="badge badge-green">CNAME</span></td>
+            <td><span class="ssl-full">full</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url"><a href="https://aws-seip.mysak.fun" target="_blank">aws-seip.mysak.fun</a></span></td>
+            <td><span class="svc-desc">SEIP Portal na AWS (nat-bastion)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">A → AWS Elastic IP<br/>(dev-nat-bastion-eip)</span></td>
+            <td><span class="badge badge-blue">A</span></td>
+            <td><span class="ssl-full">full</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url"><a href="https://az-seip.mysak.fun" target="_blank">az-seip.mysak.fun</a></span></td>
+            <td><span class="svc-desc">SEIP Portal na Azure (AKS nginx-ingress)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">A → 20.103.44.124<br/>(nginx-ingress LB IP)</span></td>
+            <td><span class="badge badge-blue">A</span></td>
+            <td><span class="ssl-full">full</span></td>
+          </tr>
+          <!-- Penny skupina -->
+          <tr>
+            <td><span class="svc-url"><a href="https://penny.mysak.fun" target="_blank">penny.mysak.fun</a></span></td>
+            <td><span class="svc-desc">Cost dashboard (hlavní alias → AWS)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">CNAME → aws-penny ALB<br/>alb-prd-euc1-penny-279184951.eu-central-1.elb.amazonaws.com</span></td>
+            <td><span class="badge badge-green">CNAME</span></td>
+            <td><span class="ssl-flex">flexible ⚠️</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url"><a href="https://aws-penny.mysak.fun" target="_blank">aws-penny.mysak.fun</a></span></td>
+            <td><span class="svc-desc">Cost dashboard AWS (FastAPI + boto3)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">CNAME → aws-penny ALB<br/>(stejné jako penny)</span></td>
+            <td><span class="badge badge-green">CNAME</span></td>
+            <td><span class="ssl-flex">flexible ⚠️</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url"><a href="https://az-penny.mysak.fun" target="_blank">az-penny.mysak.fun</a></span></td>
+            <td><span class="svc-desc">Cost dashboard Azure (FastAPI + azure-identity)</span></td>
+            <td><span class="badge badge-lock">🔒 Entra ID</span></td>
+            <td><span class="svc-backend">CNAME → Azure Container App<br/>ca-prd-eus-penny.thankfulisland-4131bb98.eastus.azurecontainerapps.io</span></td>
+            <td><span class="badge badge-green">CNAME</span></td>
+            <td><span class="ssl-full">full</span></td>
+          </tr>
+          <!-- Ostatní — Azure DNS (ne Cloudflare) -->
+          <tr>
+            <td><span class="svc-url">llm.mysak.fun</span></td>
+            <td><span class="svc-desc">AKS LLM cluster (Azure VM)</span></td>
+            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
+            <td><span class="svc-backend">A → 20.230.229.131<br/>(pip-dev-wus2-llm)</span></td>
+            <td><span class="badge badge-blue">A</span> <span class="badge badge-gray">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url">grafana.llm.mysak.fun</span></td>
+            <td><span class="svc-desc">Grafana (Kubernetes ingress)</span></td>
+            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
+            <td><span class="svc-backend">CNAME → llm.mysak.fun</span></td>
+            <td><span class="badge badge-green">CNAME</span> <span class="badge badge-gray">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-url">cloudfire.mysak.fun</span></td>
+            <td><span class="svc-desc">Azure App Service (networking lab)</span></td>
+            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
+            <td><span class="svc-backend">CNAME → mi-3-cloudfire-y29hf3.azurewebsites.net</span></td>
+            <td><span class="badge badge-green">CNAME</span> <span class="badge badge-gray">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-warn" style="margin-top:14px;">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <strong>llm, grafana.llm, cloudfire</strong> jsou spravovány v <strong>Azure DNS zóně</strong> (Terraform resource <code>azurerm_dns_zone.mysak_fun</code>), ale DNS je autoritativní v Cloudflare. Tyto záznamy mohou být dostupné pouze pokud jsou zároveň přidány do Cloudflare (buď Terraformem nebo manuálně v dashboardu).
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 2 — REQUEST FLOW
+  ══════════════════════════════════════════════════════════ -->
+  <section id="flow">
+    <div class="section-title">
+      <div class="section-icon" style="background:#2d1b5c;">🔄</div>
+      Request flow — jak funguje přístup
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700; color:#f1f5f9; margin-bottom:16px;">Standardní chráněná URL (např. seip.mysak.fun)</div>
+      <div class="flow">
+        <div class="flow-node">
+          <div class="fn-icon">🧑</div>
+          <div class="fn-title">Uživatel</div>
+          <div class="fn-sub">browser</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-label">HTTPS req</div>
+          <div class="fa-line"></div>
+          <div class="fa-tip">→</div>
+        </div>
+        <div class="flow-node" style="border-color:#f59e0b;">
+          <div class="fn-icon">☁️</div>
+          <div class="fn-title">Cloudflare</div>
+          <div class="fn-sub">Edge proxy + WAF</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-label">není session?</div>
+          <div class="fa-line"></div>
+          <div class="fa-tip">→</div>
+        </div>
+        <div class="flow-node" style="border-color:#a855f7;">
+          <div class="fn-icon">🔐</div>
+          <div class="fn-title">Access Gate</div>
+          <div class="fn-sub">Zero Trust</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-label">redirect OAuth</div>
+          <div class="fa-line"></div>
+          <div class="fa-tip">→</div>
+        </div>
+        <div class="flow-node" style="border-color:#a855f7;">
+          <div class="fn-icon">🏢</div>
+          <div class="fn-title">Entra ID</div>
+          <div class="fn-sub">Azure AD login</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-label">JWT token</div>
+          <div class="fa-line"></div>
+          <div class="fa-tip">→</div>
+        </div>
+        <div class="flow-node" style="border-color:#a855f7;">
+          <div class="fn-icon">✅</div>
+          <div class="fn-title">Policy check</div>
+          <div class="fn-sub">email whitelist</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-label">CF cookie (24h)</div>
+          <div class="fa-line"></div>
+          <div class="fa-tip">→</div>
+        </div>
+        <div class="flow-node" style="border-color:#22c55e;">
+          <div class="fn-icon">🖥️</div>
+          <div class="fn-title">Backend</div>
+          <div class="fn-sub">AWS / Azure</div>
+        </div>
+      </div>
+
+      <div class="steps" style="margin-top:24px;">
+        <div class="step">
+          <div class="step-title">1. DNS resolution cez Cloudflare</div>
+          <div class="step-body">WEDOS deleguje <code>mysak.fun</code> na Cloudflare nameservery. Cloudflare vrátí svou vlastní Edge IP (ne přímo IP backendu) — provoz jde vždy přes CF proxy (orange cloud).</div>
+        </div>
+        <div class="step">
+          <div class="step-title">2. Cloudflare Access interceptuje požadavek</div>
+          <div class="step-body">Pokud URL nemá platnou <code>CF_Authorization</code> cookie, Access přesměruje na login page. Session trvá <code>24h</code>, poté je nutné znovu přihlášení.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">3. OAuth 2.0 flow s Entra ID (Azure AD)</div>
+          <div class="step-body">Cloudflare přesměruje na <code>login.microsoftonline.com</code> s parametry App Registration (<code>client_id</code>, <code>tenant_id = f50acfeb-...</code>). Uživatel se přihlásí pomocí <code>michal.burdik@gmail.com</code>. Entra vrátí JWT.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">4. Kontrola policy</div>
+          <div class="step-body">Access ověří, zda JWT email odpovídá whitelist pravidlu: <code>include { email = ["michal.burdik@gmail.com"] }</code>. Pokud ano, nastaví <code>CF_Authorization</code> cookie.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">5. Proxied request na backend</div>
+          <div class="step-body">Cloudflare přepošle požadavek na backend (AWS EIP / Azure LB / ALB). Přidá hlavičky <code>Cf-Access-Authenticated-User-Email</code> a <code>Cf-Access-Jwt-Assertion</code> — backend může JWT verifikovat.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">ℹ️</span>
+      <div class="callout-body">
+        <strong>auto_redirect_to_identity = true</strong> — všechny Access aplikace mají zapnutý automatický redirect na Entra ID přihlašovací stránku. Uživatel nikdy neuvidí Cloudflare Access "login" stránku — rovnou skočí na Microsoft login.
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 3 — ENTRA ID KONFIGURACE
+  ══════════════════════════════════════════════════════════ -->
+  <section id="entraid">
+    <div class="section-title">
+      <div class="section-icon" style="background:#2d1b5c;">🏢</div>
+      Entra ID — konfigurace a napojení
+    </div>
+
+    <div class="grid2">
+
+      <div>
+        <div class="entra-box">
+          <div class="entra-title">🔑 App Registration (Azure Portal)</div>
+          <div class="kv-grid">
+            <div class="kv-key">Tenant ID</div>
+            <div class="kv-val highlight">f50acfeb-1d10-42e2-80af-2f0ca0a0d6a0</div>
+            <div class="kv-key">Client ID</div>
+            <div class="kv-val highlight">var.entra_seip_client_id (.env)</div>
+            <div class="kv-key">Client Secret</div>
+            <div class="kv-val" style="color:var(--red-txt);">var.entra_seip_client_secret (.env)</div>
+            <div class="kv-key">Redirect URI</div>
+            <div class="kv-val blue">&lt;team&gt;.cloudflareaccess.com/cdn-cgi/access/callback</div>
+            <div class="kv-key">Support Groups</div>
+            <div class="kv-val green">true</div>
+            <div class="kv-key">TF Provider type</div>
+            <div class="kv-val">azureAD</div>
+            <div class="kv-key">TF Resource</div>
+            <div class="kv-val">cloudflare_access_identity_provider.entra_id</div>
+          </div>
+        </div>
+
+        <div class="callout callout-warn" style="margin-top:12px;">
+          <span class="callout-icon">🔧</span>
+          <div class="callout-body">
+            Při vytváření nové App Registration v Azure Portalu musí být Redirect URI nastavena na:<br/>
+            <code>https://&lt;cloudflare-team&gt;.cloudflareaccess.com/cdn-cgi/access/callback</code><br/>
+            Bez toho OAuth flow selže.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="height:100%;">
+          <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Cloudflare Access — chráněné aplikace</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+
+            <div style="background:var(--surface2); border-radius:8px; padding:12px 14px; border-left:3px solid var(--purple);">
+              <div style="font-size:0.82rem; font-weight:700; color:#f1f5f9;">SEIP Portal (AWS)</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--blue-text); margin-top:4px;">aws-seip.mysak.fun</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--blue-text);">seip.mysak.fun</div>
+              <div style="font-size:0.7rem; color:var(--muted); margin-top:6px;">session_duration: 24h</div>
+            </div>
+
+            <div style="background:var(--surface2); border-radius:8px; padding:12px 14px; border-left:3px solid var(--blue);">
+              <div style="font-size:0.82rem; font-weight:700; color:#f1f5f9;">SEIP Portal (Azure)</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--blue-text); margin-top:4px;">az-seip.mysak.fun</div>
+              <div style="font-size:0.7rem; color:var(--muted); margin-top:6px;">session_duration: 24h</div>
+            </div>
+
+            <div style="background:var(--surface2); border-radius:8px; padding:12px 14px; border-left:3px solid var(--green);">
+              <div style="font-size:0.82rem; font-weight:700; color:#f1f5f9;">aws-penny / penny</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--green-text); margin-top:4px;">aws-penny.mysak.fun</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--green-text);">penny.mysak.fun</div>
+              <div style="font-size:0.7rem; color:var(--muted); margin-top:6px;">session_duration: 24h</div>
+            </div>
+
+            <div style="background:var(--surface2); border-radius:8px; padding:12px 14px; border-left:3px solid var(--cyan);">
+              <div style="font-size:0.82rem; font-weight:700; color:#f1f5f9;">az-penny</div>
+              <div style="font-family:var(--mono); font-size:0.72rem; color:var(--cyan-txt); margin-top:4px;">az-penny.mysak.fun</div>
+              <div style="font-size:0.7rem; color:var(--muted); margin-top:6px;">session_duration: 24h</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Access Policy — email whitelist (všechny aplikace)</div>
+      <pre><span class="hl-kw">resource</span> <span class="hl-str">"cloudflare_access_policy"</span> <span class="hl-str">"&lt;app&gt;_allow"</span> {
+  name       = <span class="hl-str">"Allow michal.burdik@gmail.com"</span>
+  precedence = <span class="hl-num">1</span>
+  decision   = <span class="hl-str">"allow"</span>
+
+  include {
+    email = [<span class="hl-str">"michal.burdik@gmail.com"</span>]
+  }
+}</pre>
+      <div class="callout callout-info" style="margin-top:0;">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">
+          <strong>Pouze jeden povolený email.</strong> Při přidávání dalších uživatelů stačí přidat email do listu <code>include { email = [...] }</code> a znovu spustit <code>terraform apply</code>. Není třeba vytvářet novou App Registration.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 4 — DNS ZÁZNAMY
+  ══════════════════════════════════════════════════════════ -->
+  <section id="dns">
+    <div class="section-title">
+      <div class="section-icon" style="background:#0e2038;">📋</div>
+      DNS záznamy
+    </div>
+
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="chip">
+        <span class="chip-label">Autoritativní DNS</span>
+        <span class="chip-val">☁️ Cloudflare</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Registrátor (NS delegace)</span>
+        <span class="chip-val">🌐 WEDOS → Cloudflare NS</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Zóna v Azure DNS</span>
+        <span class="chip-val">existuje, ale NENÍ autoritativní</span>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Zone-wide SSL</span>
+        <span class="chip-val">full (s výjimkou aws-penny, penny)</span>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="dns-table">
+        <thead>
+          <tr>
+            <th>Název</th>
+            <th>Typ</th>
+            <th>Cíl / Hodnota</th>
+            <th>Proxied</th>
+            <th>SSL</th>
+            <th>Access</th>
+            <th>Poznámka</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr class="group-header">
+            <td colspan="7">☁️ Cloudflare záznamy — spravováno Terraformem</td>
+          </tr>
+
+          <tr>
+            <td>aws-seip</td>
+            <td><span class="t-a">A</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">data.aws_eip.nat_bastion.public_ip<br/>(tag: dev-nat-bastion-eip)</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-full">full</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">IP čtena z AWS EIP tagu</td>
+          </tr>
+          <tr>
+            <td>seip</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">aws-seip.mysak.fun</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-full">full</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">Alias na AWS verzi</td>
+          </tr>
+          <tr>
+            <td>az-seip</td>
+            <td><span class="t-a">A</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">20.103.44.124<br/>(var.azure_seip_nginx_ip)</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-full">full</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">nginx-ingress LB IP z azure-seip</td>
+          </tr>
+          <tr>
+            <td>aws-penny</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">alb-prd-euc1-penny-279184951<br/>.eu-central-1.elb.amazonaws.com</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-flex">flexible ⚠️</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">ALB mluví HTTP, flex ruleset</td>
+          </tr>
+          <tr>
+            <td>penny</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">alb-prd-euc1-penny-279184951<br/>.eu-central-1.elb.amazonaws.com</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-flex">flexible ⚠️</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">Hlavní penny URL, stejný ALB</td>
+          </tr>
+          <tr>
+            <td>az-penny</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">ca-prd-eus-penny.thankfulisland-<br/>4131bb98.eastus.azurecontainerapps.io</td>
+            <td><span class="proxied-yes">✅ proxied</span></td>
+            <td><span class="ssl-full">full</span></td>
+            <td><span class="badge badge-lock" style="font-size:0.62rem;">🔒 Access</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">Azure Container Apps, vlastní cert</td>
+          </tr>
+          <tr>
+            <td>asuid.az-penny</td>
+            <td><span class="t-txt">TXT</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">24C4FD8D3A…</td>
+            <td><span class="proxied-no">— DNS only</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td>—</td>
+            <td style="font-size:0.72rem; color:var(--muted);">Domain verification pro ACA</td>
+          </tr>
+          <tr>
+            <td>_5ke9xvuuxhhbsnk4...</td>
+            <td><span class="t-txt">TXT</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">az-penny.mysak.fun</td>
+            <td><span class="proxied-no">— DNS only</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td>—</td>
+            <td style="font-size:0.72rem; color:var(--muted);">Cert validace az-penny</td>
+          </tr>
+          <tr>
+            <td>_acm-validation.*</td>
+            <td><span class="t-txt">TXT/CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">← aws_acm_certificate (dynamic)</td>
+            <td><span class="proxied-no">— DNS only</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td>—</td>
+            <td style="font-size:0.72rem; color:var(--muted);">ACM cert validace pro aws-penny</td>
+          </tr>
+
+          <tr class="group-header">
+            <td colspan="7">🔷 Azure DNS záznamy — azurerm_dns_zone.mysak_fun (není autoritativní)</td>
+          </tr>
+
+          <tr>
+            <td>llm</td>
+            <td><span class="t-a">A</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">20.230.229.131</td>
+            <td><span class="proxied-no">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">AKS LLM cluster (az-llm-aks)</td>
+          </tr>
+          <tr>
+            <td>grafana.llm</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">llm.mysak.fun</td>
+            <td><span class="proxied-no">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">Grafana přes ingress</td>
+          </tr>
+          <tr>
+            <td>cloudfire</td>
+            <td><span class="t-cname">CNAME</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">mi-3-cloudfire-y29hf3.azurewebsites.net</td>
+            <td><span class="proxied-no">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
+            <td style="font-size:0.72rem; color:var(--muted);">Azure App Service</td>
+          </tr>
+          <tr>
+            <td>asuid.cloudfire</td>
+            <td><span class="t-txt">TXT</span></td>
+            <td style="font-family:var(--mono); font-size:0.74rem;">24C4FD8D…</td>
+            <td><span class="proxied-no">Azure DNS</span></td>
+            <td><span class="ssl-na">—</span></td>
+            <td>—</td>
+            <td style="font-size:0.72rem; color:var(--muted);">App Service domain verify</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 5 — SSL / TLS
+  ══════════════════════════════════════════════════════════ -->
+  <section id="ssl">
+    <div class="section-title">
+      <div class="section-icon" style="background:#14391c;">🔒</div>
+      SSL / TLS konfigurace
+    </div>
+
+    <div class="grid2">
       <div class="card">
-        <div class="card-header">
-          <div class="icon icon-wedos">🌐</div>
-          <div>
-            <div class="card-title">WEDOS</div>
-            <div class="card-subtitle">mysak.fun registrar</div>
-          </div>
+        <div style="font-weight:700; color:#f1f5f9; margin-bottom:12px;">Zone-wide nastavení</div>
+        <div class="kv-grid">
+          <div class="kv-key">Mode</div>
+          <div class="kv-val green">full</div>
+          <div class="kv-key">Platí pro</div>
+          <div class="kv-val">všechny subdomény mysak.fun</div>
+          <div class="kv-key">Požadavek</div>
+          <div class="kv-val">Origin musí mít platný cert (Let's Encrypt OK)</div>
+          <div class="kv-key">TF resource</div>
+          <div class="kv-val">cloudflare_zone_settings_override.mysak_fun</div>
         </div>
-        <div class="badge-row">
-          <span class="badge badge-gray">NS delegation</span>
-        </div>
-        <div class="state-note">
-          Nameservers point to<br/>
-          <code>azuredns.com</code><br/>
-          (output: <code>nameservers</code>)
+        <div class="callout callout-info" style="margin-top:12px;">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body">Upgrade na <code>strict</code> = Cloudflare navíc verifikuje certifikační řetězec (CA). Pro AKS s Let's Encrypt je to bezpečnější volba.</div>
         </div>
       </div>
-    </div>
 
-    <!-- ── Connector ── -->
-    <div class="h-connector">
-      <div class="hline"></div>
-      <div class="arrow">→</div>
-    </div>
-
-    <!-- ── Column 2: Azure DNS ── -->
-    <div class="col col-azure">
-      <div class="section-label">Azure · rg-dns-mysak-fun · West Europe</div>
-
-      <!-- Terraform -->
       <div class="card">
-        <div class="card-header">
-          <div class="icon icon-tf">🏗️</div>
-          <div>
-            <div class="card-title">Terraform</div>
-            <div class="card-subtitle">azurerm ~3.0 · local state</div>
-          </div>
+        <div style="font-weight:700; color:#f1f5f9; margin-bottom:12px;">Výjimka — flexible SSL (aws-penny, penny)</div>
+        <div class="kv-grid">
+          <div class="kv-key">Mode</div>
+          <div class="kv-val" style="color:var(--cyan-txt);">flexible</div>
+          <div class="kv-key">Důvod</div>
+          <div class="kv-val">AWS ALB mluví HTTP (ne HTTPS) — bez ACM listeneru na 443</div>
+          <div class="kv-key">Implementace</div>
+          <div class="kv-val">cloudflare_ruleset "aws-penny SSL override"<br/>phase: http_config_settings</div>
+          <div class="kv-key">Výraz</div>
+          <div class="kv-val">(http.host eq "aws-penny.mysak.fun") or<br/>(http.host eq "penny.mysak.fun")</div>
         </div>
-        <div class="badge-row">
-          <span class="badge badge-purple">IaC</span>
-          <span class="badge badge-gray">main.tf / variables.tf</span>
-        </div>
-        <div class="state-note">
-          Reads remote state from <code>azure-penny</code> (azurepennytff04cd1)<br/>
-          and <code>az-mongo</code> (azumongotfstate) / <code>tfstate</code>
+        <div class="callout callout-warn" style="margin-top:12px;">
+          <span class="callout-icon">⚠️</span>
+          <div class="callout-body"><strong>Flexible SSL = provoz Cloudflare → ALB jde přes HTTP.</strong> Uživatel→Cloudflare je HTTPS. Pokud ALB přidá HTTPS listener + ACM cert, přepni na <code>full</code>.</div>
         </div>
       </div>
+    </div>
 
-      <!-- DNS Zone -->
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:700; color:#f1f5f9; margin-bottom:12px;">ACM certifikát pro aws-penny.mysak.fun</div>
+      <div class="kv-grid">
+        <div class="kv-key">Resource</div>
+        <div class="kv-val">aws_acm_certificate.aws_penny</div>
+        <div class="kv-key">Validace</div>
+        <div class="kv-val">DNS (CNAME záznamy přidány do Cloudflare automaticky)</div>
+        <div class="kv-key">Output</div>
+        <div class="kv-val green">aws_penny_acm_cert_arn — vložit do aws-penny/terraform/variables/prd.tfvars</div>
+        <div class="kv-key">Region</div>
+        <div class="kv-val">eu-central-1 (AWS provider)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 6 — TERRAFORM
+  ══════════════════════════════════════════════════════════ -->
+  <section id="terraform">
+    <div class="section-title">
+      <div class="section-icon" style="background:#2d1b4e;">🏗️</div>
+      Terraform — struktura a provideři
+    </div>
+
+    <div class="grid2">
+
       <div class="card">
-        <div class="card-header">
-          <div class="icon icon-dns">🔷</div>
-          <div>
-            <div class="card-title">azurerm_dns_zone</div>
-            <div class="card-subtitle">mysak.fun</div>
-          </div>
+        <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Provideři</div>
+        <div class="kv-grid">
+          <div class="kv-key">Cloudflare</div>
+          <div class="kv-val">cloudflare/cloudflare ~4.0<br/><span style="color:var(--muted);">DNS záznamy, Access, Zone settings</span></div>
+          <div class="kv-key">AWS</div>
+          <div class="kv-val">hashicorp/aws ~5.0 · eu-central-1<br/><span style="color:var(--muted);">data.aws_eip, ACM certifikát</span></div>
+          <div class="kv-key">Azure</div>
+          <div class="kv-val">hashicorp/azurerm ~3.0<br/><span style="color:var(--muted);">DNS zóna (existuje, není autoritativní)</span></div>
+          <div class="kv-key">State</div>
+          <div class="kv-val" style="color:var(--orange-txt);">lokální (terraform.tfstate)<br/><span style="color:var(--muted);">⚠️ backupujte terraform.tfstate!</span></div>
         </div>
-        <div class="badge-row">
-          <span class="badge badge-blue">Azure DNS</span>
-          <span class="badge badge-gray">TTL 300</span>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Klíčové vstupy (variables.tf)</div>
+        <div class="kv-grid">
+          <div class="kv-key">cloudflare_api_token</div>
+          <div class="kv-val" style="color:var(--red-txt);">sensitive · Zone:DNS:Edit + Zone:Zone:Read</div>
+          <div class="kv-key">cloudflare_account_id</div>
+          <div class="kv-val">Zero Trust dashboard → Settings → Account ID</div>
+          <div class="kv-key">entra_seip_client_id</div>
+          <div class="kv-val" style="color:var(--red-txt);">sensitive · App Registration Client ID</div>
+          <div class="kv-key">entra_seip_client_secret</div>
+          <div class="kv-val" style="color:var(--red-txt);">sensitive · App Registration Secret</div>
+          <div class="kv-key">azure_seip_nginx_ip</div>
+          <div class="kv-val">default: 20.103.44.124<br/><span style="color:var(--muted);">terraform output nginx_ingress_ip (azure-seip)</span></div>
+          <div class="kv-key">aws_penny_alb_dns</div>
+          <div class="kv-val">default: alb-prd-euc1-penny-279184951…<br/><span style="color:var(--muted);">terraform output alb_dns_name (aws-penny)</span></div>
+          <div class="kv-key">az_penny_aca_fqdn</div>
+          <div class="kv-val">default: ca-prd-eus-penny…<br/><span style="color:var(--muted);">terraform output container_app_fqdn (azure-penny)</span></div>
         </div>
+      </div>
 
-        <!-- Records table -->
-        <table class="records-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Value / Target</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>penny</td>
-              <td><span class="type-cname">CNAME</span></td>
-              <td>← remote state output</td>
-            </tr>
-            <tr>
-              <td>asuid.penny</td>
-              <td><span class="type-txt">TXT</span></td>
-              <td>24C4FD8D…</td>
-            </tr>
-            <tr>
-              <td>llm</td>
-              <td><span class="type-a">A</span></td>
-              <td>20.230.229.131</td>
-            </tr>
-            <tr>
-              <td>grafana.llm</td>
-              <td><span class="type-cname">CNAME</span></td>
-              <td>llm.mysak.fun</td>
-            </tr>
-            <tr>
-              <td>cloudfire</td>
-              <td><span class="type-cname">CNAME</span></td>
-              <td>mi-3-cloudfire-y29hf3.azurewebsites.net</td>
-            </tr>
-            <tr>
-              <td>asuid.cloudfire</td>
-              <td><span class="type-txt">TXT</span></td>
-              <td>24C4FD8D…</td>
-            </tr>
-            <tr>
-              <td>docs</td>
-              <td><span class="type-cname">CNAME</span></td>
-              <td>← az-mongo remote state</td>
-            </tr>
-            <tr>
-              <td>asuid.docs</td>
-              <td><span class="type-txt">TXT</span></td>
-              <td>← az-mongo remote state</td>
-            </tr>
-          </tbody>
-        </table>
+    </div>
 
-        <div class="state-note">
-          <code>mysak.fun.zone</code> — Cloudflare import format<br/>
-          (alternative / migration reference)
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Terraform resource přehled</div>
+      <div class="tf-tree">
+        <div><span class="hl-cmt"># ── Azure DNS (infrastruktura, neautoritativní) ──────────────</span></div>
+        <div><span class="tf-resource">azurerm_resource_group</span>       rg-dns-mysak-fun</div>
+        <div><span class="tf-resource">azurerm_dns_zone</span>              mysak.fun</div>
+        <div><span class="tf-resource">azurerm_dns_a_record</span>          llm (20.230.229.131)</div>
+        <div><span class="tf-resource">azurerm_dns_cname_record</span>      grafana.llm → llm.mysak.fun</div>
+        <div><span class="tf-resource">azurerm_dns_cname_record</span>      cloudfire → azurewebsites.net</div>
+        <div><span class="tf-resource">azurerm_dns_txt_record</span>        asuid.cloudfire</div>
+        <br/>
+        <div><span class="hl-cmt"># ── Cloudflare — DNS záznamy ─────────────────────────────────</span></div>
+        <div><span class="tf-data">data.cloudflare_zone</span>          mysak.fun</div>
+        <div><span class="tf-data">data.aws_eip</span>                  nat_bastion (tag dev-nat-bastion-eip)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             aws-seip (A, proxied)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             seip (CNAME → aws-seip)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             az-seip (A, proxied)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             aws-penny (CNAME, proxied)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             penny (CNAME, proxied)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             az-penny (CNAME, proxied)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             asuid.az-penny (TXT)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             _5ke9x... (TXT cert validation)</div>
+        <div><span class="tf-resource">cloudflare_record</span>             aws_penny_acm_validation (for_each)</div>
+        <br/>
+        <div><span class="hl-cmt"># ── Cloudflare — Access (Zero Trust) ────────────────────────</span></div>
+        <div><span class="tf-resource">cloudflare_access_identity_provider</span>  entra_id (azureAD)</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        aws_seip  <span class="hl-cmt"># aws-seip.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             aws_seip_allow</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        az_seip   <span class="hl-cmt"># az-seip.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             az_seip_allow</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        seip      <span class="hl-cmt"># seip.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             seip_allow</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        aws_penny <span class="hl-cmt"># aws-penny.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             aws_penny_allow</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        penny     <span class="hl-cmt"># penny.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             penny_allow</div>
+        <div><span class="tf-resource">cloudflare_access_application</span>        az_penny  <span class="hl-cmt"># az-penny.mysak.fun</span></div>
+        <div><span class="tf-resource">cloudflare_access_policy</span>             az_penny_allow</div>
+        <br/>
+        <div><span class="hl-cmt"># ── Cloudflare — Zone settings ──────────────────────────────</span></div>
+        <div><span class="tf-resource">cloudflare_zone_settings_override</span>    mysak_fun (ssl=full)</div>
+        <div><span class="tf-resource">cloudflare_ruleset</span>                   aws_penny_ssl (flexible pro aws-penny + penny)</div>
+        <br/>
+        <div><span class="hl-cmt"># ── AWS — ACM certifikát ────────────────────────────────────</span></div>
+        <div><span class="tf-resource">aws_acm_certificate</span>                  aws_penny (DNS validation)</div>
+        <div><span class="tf-resource">aws_acm_certificate_validation</span>       aws_penny</div>
+        <br/>
+        <div><span class="hl-cmt"># ── Outputs ─────────────────────────────────────────────────</span></div>
+        <div><span class="tf-output">output</span> nameservers           <span class="hl-cmt"># NS záznamy pro WEDOS</span></div>
+        <div><span class="tf-output">output</span> aws_penny_acm_cert_arn <span class="hl-cmt"># ARN pro aws-penny/terraform/variables/prd.tfvars</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:700; color:#f1f5f9; margin-bottom:12px;">Workflow — jak nasadit změnu</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">Přidat/změnit DNS záznam nebo Access policy</div>
+          <div class="step-body">Edituj <code>main.tf</code>, spusť <code>terraform plan</code>, zkontroluj diff, pak <code>terraform apply</code>. Většina změn se projeví do 5 minut (CF cache).</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Změna nginx-ingress IP (az-seip)</div>
+          <div class="step-body">Zjisti novou IP: <code>terraform output nginx_ingress_ip</code> v <code>azure-seip/infra</code>. Aktualizuj <code>var.azure_seip_nginx_ip</code> v <code>.env</code> nebo <code>prd.tfvars</code>, pak <code>terraform apply</code>.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Přidání nového uživatele do Access</div>
+          <div class="step-body">Přidej email do všech <code>cloudflare_access_policy</code> bloků: <code>include { email = ["michal.burdik@gmail.com", "novy@example.com"] }</code>, pak <code>terraform apply</code>.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Nová chráněná služba</div>
+          <div class="step-body">1. Přidej <code>cloudflare_record</code> (DNS). 2. Přidej <code>cloudflare_access_application</code> s <code>allowed_idps = [cloudflare_access_identity_provider.entra_id.id]</code>. 3. Přidej <code>cloudflare_access_policy</code>. 4. <code>terraform apply</code>.</div>
         </div>
       </div>
     </div>
 
-    <!-- ── Connector ── -->
-    <div class="h-connector">
-      <div class="hline"></div>
-      <div class="arrow">→</div>
-    </div>
-
-    <!-- ── Column 3: Targets ── -->
-    <div class="col col-targets">
-      <div class="section-label">Resolved Targets</div>
-
-      <div class="target-group">
-
-        <!-- AKS LLM -->
-        <div class="target-card aks">
-          <div class="card-header" style="margin-bottom:6px">
-            <div class="icon icon-aks" style="width:28px;height:28px;font-size:14px;">☸️</div>
-            <div>
-              <div class="target-title">AKS LLM Cluster</div>
-              <div class="target-detail">20.230.229.131 (static pip-dev-wus2-llm)</div>
-            </div>
-          </div>
-          <div class="badge-row">
-            <span class="badge badge-blue">llm.mysak.fun</span>
-            <span class="badge badge-blue">grafana.llm.mysak.fun</span>
-          </div>
-          <div class="target-repo">
-            repo: <a>az-llm-aks</a> · IP survives nightly cluster destroy
-          </div>
-        </div>
-
-        <!-- penny / Container Apps -->
-        <div class="target-card penny">
-          <div class="card-header" style="margin-bottom:6px">
-            <div class="icon icon-app" style="width:28px;height:28px;font-size:14px;">📦</div>
-            <div>
-              <div class="target-title">Azure Container Apps</div>
-              <div class="target-detail">ca-prd-eus-penny.thankfulisland-4131bb98.eastus.azurecontainerapps.io</div>
-            </div>
-          </div>
-          <div class="badge-row">
-            <span class="badge badge-green">penny.mysak.fun</span>
-          </div>
-          <div class="target-repo">
-            repo: <a>azure-penny</a> · FQDN via remote state output
-          </div>
-        </div>
-
-        <!-- cloudfire -->
-        <div class="target-card cloud">
-          <div class="card-header" style="margin-bottom:6px">
-            <div class="icon icon-app" style="width:28px;height:28px;font-size:14px;">🔥</div>
-            <div>
-              <div class="target-title">Azure App Service (cloudfire)</div>
-              <div class="target-detail">mi-3-cloudfire-y29hf3.azurewebsites.net</div>
-            </div>
-          </div>
-          <div class="badge-row">
-            <span class="badge badge-orange">cloudfire.mysak.fun</span>
-          </div>
-          <div class="target-repo">
-            repo: <a>az-networking-lab/3-cloudfire-web-app</a>
-          </div>
-        </div>
-
-        <!-- docs / az-mongo -->
-        <div class="target-card" style="border-left: 3px solid #06b6d4;">
-          <div class="card-header" style="margin-bottom:6px">
-            <div class="icon icon-app" style="width:28px;height:28px;font-size:14px;">📄</div>
-            <div>
-              <div class="target-title">Azure Container Apps (docs)</div>
-              <div class="target-detail">← az-mongo remote state output</div>
-            </div>
-          </div>
-          <div class="badge-row">
-            <span class="badge badge-blue">docs.mysak.fun</span>
-          </div>
-          <div class="target-repo">
-            repo: <a>az-mongo</a> · FQDN via remote state output
-          </div>
-        </div>
-
-        <!-- Grafana (sub-target) -->
-        <div class="target-card aks" style="border-left-color:#a855f7">
-          <div class="card-header" style="margin-bottom:6px">
-            <div class="icon icon-aks" style="width:28px;height:28px;font-size:14px;">📊</div>
-            <div>
-              <div class="target-title">Grafana</div>
-              <div class="target-detail">grafana.llm.mysak.fun → llm.mysak.fun → 20.230.229.131</div>
-            </div>
-          </div>
-          <div class="badge-row">
-            <span class="badge badge-purple">CNAME chain</span>
-          </div>
-        </div>
-
+    <div class="callout callout-warn" style="margin-top:14px;">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <strong>Lokální state!</strong> Soubor <code>terraform.tfstate</code> obsahuje všechna tajemství a je uložen lokálně. Zálohuj ho a nikdy ho nekompituj do gitu. Při ztrátě bude nutné importovat všechny resources ručně.
       </div>
     </div>
+  </section>
 
-  </div><!-- /diagram -->
-
-  <!-- Legend -->
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#7dd3fc"></div> A record</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#86efac"></div> CNAME record</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#fdba74"></div> TXT record</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c4b5fd"></div> Terraform IaC</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div> Pending / TODO</div>
-    <div class="legend-item" style="margin-left:12px; color:#475569; font-size:0.68rem;">
-      Generated 2026-05-19 · repo: az-dns-mysak
-    </div>
+  <!-- Footer -->
+  <div class="footer">
+    <span>📁 repo: <code>dns-mysak-cloudflare</code> · soubor: <code>main.tf</code>, <code>variables.tf</code></span>
+    <span>🔑 Přihlašování: <code>michal.burdik@gmail.com</code> via Microsoft Entra ID</span>
+    <span>🗓️ Generováno: 2026-05-25</span>
   </div>
 
+</div><!-- /page -->
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.topnav a[href^="#"]');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.topnav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
 </body>
 </html>
