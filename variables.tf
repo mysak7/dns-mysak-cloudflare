@@ -47,3 +47,9 @@ variable "az_penny_aca_fqdn" {
   default     = "ca-prd-eus-penny.thankfulisland-4131bb98.eastus.azurecontainerapps.io"
   description = "FQDN of the azure-penny Container App (terraform output container_app_fqdn in azure-penny/terraform)"
 }
+
+variable "chaos_arena_ingress_ip" {
+  type        = string
+  default     = ""
+  description = "nginx-ingress LoadBalancer IP from az-chaos-arena AKS cluster — used for arena.mysak.fun. Get from: gh workflow run terraform-apply.yml output, or kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
+}

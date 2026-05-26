@@ -407,3 +407,19 @@ output "aws_penny_acm_cert_arn" {
   value       = aws_acm_certificate_validation.aws_penny.certificate_arn
   description = "Validated ACM cert ARN for aws-penny.mysak.fun — paste into aws-penny/terraform/variables/prd.tfvars"
 }
+
+# ---------------------------------------------------------------------------
+# arena.mysak.fun — az-chaos-arena dashboard (AKS nginx-ingress)
+# IP is ephemeral — update var.chaos_arena_ingress_ip after each cluster deploy.
+# Get IP: kubectl get svc ingress-nginx-controller -n ingress-nginx \
+#           -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+# ---------------------------------------------------------------------------
+resource "cloudflare_record" "arena" {
+  count   = var.chaos_arena_ingress_ip != "" ? 1 : 0
+  zone_id = data.cloudflare_zone.mysak_fun.id
+  name    = "arena"
+  content = var.chaos_arena_ingress_ip
+  type    = "A"
+  ttl     = 60     # low TTL — IP changes with each cluster recreate
+  proxied = true   # Cloudflare proxy: TLS termination + DDoS protection
+}
