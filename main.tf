@@ -359,6 +359,28 @@ resource "cloudflare_access_policy" "az_penny_allow" {
   }
 }
 
+# Telegram webhook bypass — allow Telegram Bot API to POST without CF Access auth.
+# The endpoint is secured at the app level via TELEGRAM_WEBHOOK_SECRET header.
+resource "cloudflare_access_application" "az_penny_telegram_webhook" {
+  account_id       = var.cloudflare_account_id
+  name             = "az-penny telegram webhook (bypass)"
+  domain           = "az-penny.mysak.fun/telegram/webhook"
+  type             = "self_hosted"
+  session_duration = "0s"
+}
+
+resource "cloudflare_access_policy" "az_penny_telegram_webhook_bypass" {
+  application_id = cloudflare_access_application.az_penny_telegram_webhook.id
+  account_id     = var.cloudflare_account_id
+  name           = "Bypass for Telegram webhook"
+  precedence     = 1
+  decision       = "bypass"
+
+  include {
+    everyone = true
+  }
+}
+
 resource "cloudflare_zone_settings_override" "mysak_fun" {
   zone_id = data.cloudflare_zone.mysak_fun.id
   settings {
