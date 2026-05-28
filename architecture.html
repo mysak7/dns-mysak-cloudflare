@@ -560,40 +560,8 @@
             <td><span class="badge badge-green">CNAME</span></td>
             <td><span class="ssl-full">full</span></td>
           </tr>
-          <!-- Ostatní — Azure DNS (ne Cloudflare) -->
-          <tr>
-            <td><span class="svc-url">llm.mysak.fun</span></td>
-            <td><span class="svc-desc">AKS LLM cluster (Azure VM)</span></td>
-            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
-            <td><span class="svc-backend">A → 20.230.229.131<br/>(pip-dev-wus2-llm)</span></td>
-            <td><span class="badge badge-blue">A</span> <span class="badge badge-gray">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-          </tr>
-          <tr>
-            <td><span class="svc-url">grafana.llm.mysak.fun</span></td>
-            <td><span class="svc-desc">Grafana (Kubernetes ingress)</span></td>
-            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
-            <td><span class="svc-backend">CNAME → llm.mysak.fun</span></td>
-            <td><span class="badge badge-green">CNAME</span> <span class="badge badge-gray">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-          </tr>
-          <tr>
-            <td><span class="svc-url">cloudfire.mysak.fun</span></td>
-            <td><span class="svc-desc">Azure App Service (networking lab)</span></td>
-            <td><span class="badge badge-open">⚠️ Bez Access</span></td>
-            <td><span class="svc-backend">CNAME → mi-3-cloudfire-y29hf3.azurewebsites.net</span></td>
-            <td><span class="badge badge-green">CNAME</span> <span class="badge badge-gray">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-          </tr>
         </tbody>
       </table>
-    </div>
-
-    <div class="callout callout-warn" style="margin-top:14px;">
-      <span class="callout-icon">⚠️</span>
-      <div class="callout-body">
-        <strong>llm, grafana.llm, cloudfire</strong> jsou spravovány v <strong>Azure DNS zóně</strong> (Terraform resource <code>azurerm_dns_zone.mysak_fun</code>), ale DNS je autoritativní v Cloudflare. Tyto záznamy mohou být dostupné pouze pokud jsou zároveň přidány do Cloudflare (buď Terraformem nebo manuálně v dashboardu).
-      </div>
     </div>
   </section>
 
@@ -816,10 +784,6 @@
         <span class="chip-val">🌐 WEDOS → Cloudflare NS</span>
       </div>
       <div class="chip">
-        <span class="chip-label">Zóna v Azure DNS</span>
-        <span class="chip-val">existuje, ale NENÍ autoritativní</span>
-      </div>
-      <div class="chip">
         <span class="chip-label">Zone-wide SSL</span>
         <span class="chip-val">full (s výjimkou aws-penny, penny)</span>
       </div>
@@ -924,47 +888,6 @@
             <td><span class="ssl-na">—</span></td>
             <td>—</td>
             <td style="font-size:0.72rem; color:var(--muted);">ACM cert validace pro aws-penny</td>
-          </tr>
-
-          <tr class="group-header">
-            <td colspan="7">🔷 Azure DNS záznamy — azurerm_dns_zone.mysak_fun (není autoritativní)</td>
-          </tr>
-
-          <tr>
-            <td>llm</td>
-            <td><span class="t-a">A</span></td>
-            <td style="font-family:var(--mono); font-size:0.74rem;">20.230.229.131</td>
-            <td><span class="proxied-no">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
-            <td style="font-size:0.72rem; color:var(--muted);">AKS LLM cluster (az-llm-aks)</td>
-          </tr>
-          <tr>
-            <td>grafana.llm</td>
-            <td><span class="t-cname">CNAME</span></td>
-            <td style="font-family:var(--mono); font-size:0.74rem;">llm.mysak.fun</td>
-            <td><span class="proxied-no">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
-            <td style="font-size:0.72rem; color:var(--muted);">Grafana přes ingress</td>
-          </tr>
-          <tr>
-            <td>cloudfire</td>
-            <td><span class="t-cname">CNAME</span></td>
-            <td style="font-family:var(--mono); font-size:0.74rem;">mi-3-cloudfire-y29hf3.azurewebsites.net</td>
-            <td><span class="proxied-no">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-            <td><span class="badge badge-open" style="font-size:0.62rem;">⚠️ Veřejné</span></td>
-            <td style="font-size:0.72rem; color:var(--muted);">Azure App Service</td>
-          </tr>
-          <tr>
-            <td>asuid.cloudfire</td>
-            <td><span class="t-txt">TXT</span></td>
-            <td style="font-family:var(--mono); font-size:0.74rem;">24C4FD8D…</td>
-            <td><span class="proxied-no">Azure DNS</span></td>
-            <td><span class="ssl-na">—</span></td>
-            <td>—</td>
-            <td style="font-size:0.72rem; color:var(--muted);">App Service domain verify</td>
           </tr>
 
         </tbody>
@@ -1084,14 +1007,6 @@
     <div class="card" style="margin-top:14px;">
       <div style="font-weight:700; color:#f1f5f9; margin-bottom:14px;">Terraform resource přehled</div>
       <div class="tf-tree">
-        <div><span class="hl-cmt"># ── Azure DNS (infrastruktura, neautoritativní) ──────────────</span></div>
-        <div><span class="tf-resource">azurerm_resource_group</span>       rg-dns-mysak-fun</div>
-        <div><span class="tf-resource">azurerm_dns_zone</span>              mysak.fun</div>
-        <div><span class="tf-resource">azurerm_dns_a_record</span>          llm (20.230.229.131)</div>
-        <div><span class="tf-resource">azurerm_dns_cname_record</span>      grafana.llm → llm.mysak.fun</div>
-        <div><span class="tf-resource">azurerm_dns_cname_record</span>      cloudfire → azurewebsites.net</div>
-        <div><span class="tf-resource">azurerm_dns_txt_record</span>        asuid.cloudfire</div>
-        <br/>
         <div><span class="hl-cmt"># ── Cloudflare — DNS záznamy ─────────────────────────────────</span></div>
         <div><span class="tf-data">data.cloudflare_zone</span>          mysak.fun</div>
         <div><span class="tf-data">data.aws_eip</span>                  nat_bastion (tag dev-nat-bastion-eip)</div>
